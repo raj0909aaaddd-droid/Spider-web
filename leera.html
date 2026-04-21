@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Leera — Where Souls Connect</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Cinzel+Decorative:wght@400;700&family=Quicksand:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --gold:#d4af37;--gold2:#f0d060;--teal:#00e5cc;--pink:#ff6eb4;--lavender:#c8a4ff;
+  --deep:#020818;--deeper:#010510;--ocean1:#001a3a;--ocean2:#003355;--ocean3:#00557a;
+}
+html{scroll-behavior:smooth}
+body{
+  background:var(--deep);
+  color:#fff;
+  font-family:'Quicksand',sans-serif;
+  overflow-x:hidden;
+  cursor:none;
+}
+
+/* Custom cursor */
+#cursor{position:fixed;width:16px;height:16px;background:radial-gradient(circle,#fff,var(--teal));border-radius:50%;pointer-events:none;z-index:9999;transform:translate(-50%,-50%);transition:transform .1s,opacity .3s;mix-blend-mode:difference}
+#cursor-trail{position:fixed;width:40px;height:40px;border:1px solid rgba(0,229,204,.4);border-radius:50%;pointer-events:none;z-index:9998;transform:translate(-50%,-50%);transition:all .25s ease;mix-blend-mode:screen}
+
+/* Canvas layers */
+#galaxy-canvas{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;pointer-events:none}
+#ocean-canvas{position:fixed;top:0;left:0;width:100%;height:100%;z-index:1;pointer-events:none;opacity:0;transition:opacity 2s}
+
+/* Portal overlay */
+#portal{
+  position:fixed;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;
+  background:radial-gradient(ellipse at center,#000 0%,#000 100%);
+  transition:opacity 1.5s ease;
+}
+#portal-ring{
+  width:300px;height:300px;border-radius:50%;
+  border:2px solid var(--teal);
+  box-shadow:0 0 60px var(--teal),0 0 120px var(--teal),inset 0 0 60px rgba(0,229,204,.3);
+  display:flex;align-items:center;justify-content:center;
+  animation:portalPulse 2s ease-in-out infinite,portalSpin 8s linear infinite;
+  position:relative;
+}
+#portal-ring::before{
+  content:'';position:absolute;inset:-20px;border-radius:50%;
+  border:1px solid rgba(212,175,55,.5);
+  animation:portalSpin 5s linear infinite reverse;
+  box-shadow:0 0 40px rgba(212,175,55,.3);
+}
+#portal-ring::after{
+  content:'';position:absolute;inset:-40px;border-radius:50%;
+  border:1px dashed rgba(200,164,255,.3);
+  animation:portalSpin 12s linear infinite;
+}
+#portal-text{
+  font-family:'Cinzel Decorative',serif;
+  color:var(--teal);font-size:1.2rem;letter-spacing:.3em;
+  text-shadow:0 0 20px var(--teal);
+  animation:portalTextGlow 2s ease-in-out infinite;
+  text-align:center;line-height:2;
+}
+#portal-enter{
+  position:absolute;bottom:80px;left:50%;transform:translateX(-50%);
+  font-family:'Quicksand',sans-serif;font-size:.85rem;letter-spacing:.5em;
+  color:rgba(255,255,255,.5);text-transform:uppercase;
+  animation:floatBlink 1.5s ease-in-out infinite;
+  cursor:pointer;
+}
+@keyframes portalPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.05)}}
+@keyframes portalSpin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+@keyframes portalTextGlow{0%,100%{text-shadow:0 0 20px var(--teal)}50%{text-shadow:0 0 40px var(--teal),0 0 60px rgba(200,164,255,.5)}}
+@keyframes floatBlink{0%,100%{opacity:.5;transform:translateX(-50%) translateY(0)}50%{opacity:1;transform:translateX(-50%) translateY(-6px)}}
+
+/* Portal zoom-in animation */
+@keyframes portalZoom{
+  0%{transform:scale(0) rotate(-180deg);opacity:0}
+  60%{transform:scale(1.1) rotate(5deg);opacity:1}
+  100%{transform:scale(1) rotate(0deg);opacity:1}
+}
+.portal-appear{animation:portalZoom 1.5s cubic-bezier(.16,1,.3,1) forwards}
+
+/* Main content */
+#main{position:relative;z-index:10}
+
+/* ===== SECTION STYLES ===== */
+section{
+  min-height:100vh;display:flex;align-items:center;justify-content:center;
+  position:relative;overflow:hidden;
+}
+
+/* Hero */
+#hero{flex-direction:column;text-align:center;padding:2rem}
+#hero-title{
+  font-family:'Cinzel Decorative',serif;
+  font-size:clamp(3rem,10vw,8rem);
+  background:linear-gradient(135deg,var(--gold),var(--gold2),#fff,var(--teal),var(--lavender));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+  background-size:300% 300%;
+  animation:gradShift 6s ease infinite;
+  line-height:1;letter-spacing:.05em;
+  opacity:0;transform:scale(.3);
+  transition:opacity 1.5s cubic-bezier(.16,1,.3,1),transform 1.5s cubic-bezier(.16,1,.3,1);
+  text-shadow:none;
+}
+#hero-sub{
+  font-family:'Cormorant Garamond',serif;
+  font-size:clamp(1.1rem,2.5vw,1.8rem);
+  color:rgba(255,255,255,.7);
+  letter-spacing:.4em;margin-top:1.5rem;font-style:italic;
+  opacity:0;transform:translateY(30px);
+  transition:opacity 1.2s .3s,transform 1.2s .3s;
+}
+#hero-tagline{
+  font-size:clamp(.8rem,1.5vw,1rem);
+  letter-spacing:.6em;color:var(--teal);
+  margin-top:2rem;text-transform:uppercase;
+  opacity:0;transform:translateY(20px);
+  transition:opacity 1s .6s,transform 1s .6s;
+}
+.hero-deco{
+  position:absolute;border-radius:50%;
+  background:radial-gradient(circle,var(--teal) 0%,transparent 70%);
+  filter:blur(80px);opacity:.15;pointer-events:none;
+}
+@keyframes gradShift{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
+
+/* Scroll sections with zoom text */
+.zoom-section{
+  flex-direction:column;text-align:center;padding:4rem 2rem;
+  perspective:1000px;
+}
+.zoom-text{
+  opacity:0;transform:scale(3) translateZ(-300px);
+  transition:opacity 1.2s cubic-bezier(.16,1,.3,1),transform 1.2s cubic-bezier(.16,1,.3,1);
+  will-change:transform,opacity;
+  position:absolute;width:90%;max-width:1000px;
+  pointer-events:none;
+}
+.zoom-text.visible{
+  opacity:1;transform:scale(1) translateZ(0);
+  pointer-events:auto;
+}
+.zoom-text.gone{
+  opacity:0;transform:scale(.1) translateZ(-400px);
+}
+.zoom-text h2{
+  font-family:'Cinzel Decorative',serif;
+  font-size:clamp(1.8rem,5vw,4rem);
+  line-height:1.3;
+}
+.zoom-text p{
+  font-family:'Cormorant Garamond',serif;
+  font-size:clamp(1rem,2.5vw,1.5rem);
+  font-style:italic;margin-top:1rem;
+  color:rgba(255,255,255,.8);letter-spacing:.05em;line-height:1.8;
+}
+.zoom-text .emoji-row{font-size:clamp(1.5rem,4vw,3rem);margin-bottom:1rem;letter-spacing:.2em}
+
+/* Color themes per section */
+.s1 h2{background:linear-gradient(135deg,var(--gold),#fff,var(--gold2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.s2 h2{background:linear-gradient(135deg,var(--teal),#fff,#00bfff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.s3 h2{background:linear-gradient(135deg,var(--pink),#fff,var(--lavender));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.s4 h2{background:linear-gradient(135deg,var(--lavender),#fff,var(--teal));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.s5 h2{background:linear-gradient(135deg,var(--gold2),var(--pink),var(--teal));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.s6 h2{background:linear-gradient(135deg,#fff,var(--gold),#fff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+
+/* Floating particles */
+.particle{
+  position:absolute;border-radius:50%;pointer-events:none;
+  animation:floatParticle linear infinite;
+}
+@keyframes floatParticle{
+  0%{transform:translateY(100vh) rotate(0deg);opacity:0}
+  10%{opacity:1}
+  90%{opacity:1}
+  100%{transform:translateY(-100px) rotate(720deg);opacity:0}
+}
+
+/* Ocean section */
+#ocean-section{
+  min-height:100vh;position:relative;overflow:hidden;
+  background:linear-gradient(180deg,var(--deeper) 0%,var(--ocean1) 30%,var(--ocean2) 60%,var(--ocean3) 100%);
+}
+.wave{
+  position:absolute;bottom:0;left:0;width:200%;height:200px;
+  background:rgba(0,100,150,.3);
+  border-radius:50%;
+  animation:waveAnim linear infinite;
+}
+.wave:nth-child(1){animation-duration:8s;opacity:.7;bottom:-20px}
+.wave:nth-child(2){animation-duration:11s;opacity:.5;bottom:-40px;animation-delay:-3s}
+.wave:nth-child(3){animation-duration:14s;opacity:.3;bottom:-60px;animation-delay:-6s}
+@keyframes waveAnim{0%{transform:translateX(0) scaleY(1)}50%{transform:translateX(-25%) scaleY(1.2)}100%{transform:translateX(-50%) scaleY(1)}}
+
+/* Glowing bubbles */
+.bubble{
+  position:absolute;border-radius:50%;
+  background:radial-gradient(circle at 30% 30%,rgba(255,255,255,.6),rgba(0,200,200,.2));
+  border:1px solid rgba(255,255,255,.3);
+  animation:bubbleRise linear infinite;
+}
+@keyframes bubbleRise{
+  0%{transform:translateY(100%);opacity:0}
+  20%{opacity:.8}
+  80%{opacity:.6}
+  100%{transform:translateY(-120vh);opacity:0}
+}
+
+/* Shimmer text */
+.shimmer{
+  background:linear-gradient(90deg,transparent 0%,rgba(255,255,255,.4) 50%,transparent 100%);
+  background-size:200% 100%;
+  animation:shimmerMove 3s ease infinite;
+  -webkit-background-clip:text;background-clip:text;
+}
+@keyframes shimmerMove{0%{background-position:200% 0}100%{background-position:-200% 0}}
+
+/* Final section */
+#final{
+  min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  text-align:center;padding:4rem 2rem;
+  background:radial-gradient(ellipse at 50% 50%,rgba(0,229,204,.05) 0%,transparent 70%);
+}
+#final-title{
+  font-family:'Cinzel Decorative',serif;
+  font-size:clamp(2rem,6vw,5rem);
+  color:var(--gold2);
+  text-shadow:0 0 40px rgba(212,175,55,.5),0 0 80px rgba(212,175,55,.3);
+  animation:finalPulse 3s ease-in-out infinite;
+  letter-spacing:.1em;
+}
+@keyframes finalPulse{0%,100%{text-shadow:0 0 40px rgba(212,175,55,.5),0 0 80px rgba(212,175,55,.3)}50%{text-shadow:0 0 60px var(--gold),0 0 120px rgba(212,175,55,.5),0 0 200px rgba(0,229,204,.3)}}
+
+/* Sparkle */
+.sparkle{
+  position:absolute;pointer-events:none;
+  animation:sparklePop .6s ease forwards;
+}
+@keyframes sparklePop{0%{transform:scale(0) rotate(0deg);opacity:1}100%{transform:scale(2) rotate(180deg);opacity:0}}
+
+/* Loading screen */
+#loading{
+  position:fixed;inset:0;z-index:200;background:#000;
+  display:flex;align-items:center;justify-content:center;
+  flex-direction:column;gap:1rem;
+  transition:opacity 1s;
+}
+#loading-bar{
+  width:200px;height:2px;background:rgba(255,255,255,.1);border-radius:2px;overflow:hidden;
+}
+#loading-fill{
+  height:100%;background:linear-gradient(90deg,var(--teal),var(--lavender),var(--gold));
+  animation:loadFill 2s ease forwards;width:0%;
+}
+#loading p{font-size:.8rem;letter-spacing:.5em;color:rgba(255,255,255,.4);text-transform:uppercase}
+@keyframes loadFill{0%{width:0%}100%{width:100%}}
+
+/* Scroll indicator */
+#scroll-hint{
+  position:fixed;bottom:40px;left:50%;transform:translateX(-50%);
+  z-index:50;display:flex;flex-direction:column;align-items:center;gap:8px;
+  opacity:1;transition:opacity .5s;
+}
+#scroll-hint span{font-size:.7rem;letter-spacing:.4em;color:rgba(255,255,255,.4)}
+#scroll-arrow{width:20px;height:30px;border:1px solid rgba(255,255,255,.3);border-radius:10px;position:relative}
+#scroll-arrow::after{
+  content:'';position:absolute;width:4px;height:4px;background:#fff;border-radius:50%;
+  left:50%;top:6px;transform:translateX(-50%);
+  animation:scrollBounce 1.5s ease infinite;
+}
+@keyframes scrollBounce{0%{top:6px;opacity:1}100%{top:18px;opacity:0}}
+
+/* Glow orb following text */
+.glow-orb{
+  position:absolute;width:300px;height:300px;border-radius:50%;
+  background:radial-gradient(circle,rgba(0,229,204,.15) 0%,transparent 70%);
+  filter:blur(40px);pointer-events:none;
+  animation:orbFloat 6s ease-in-out infinite;
+}
+@keyframes orbFloat{0%,100%{transform:translate(0,0) scale(1)}33%{transform:translate(30px,-20px) scale(1.1)}66%{transform:translate(-20px,15px) scale(.9)}}
+</style>
+</head>
+<body>
+
+<div id="cursor"></div>
+<div id="cursor-trail"></div>
+
+<!-- Loading -->
+<div id="loading">
+  <p>entering leera</p>
+  <div id="loading-bar"><div id="loading-fill"></div></div>
+</div>
+
+<!-- Portal entrance -->
+<div id="portal">
+  <div id="portal-ring" class="portal-appear">
+    <div id="portal-text">✦ LEERA ✦<br><span style="font-size:.7em;letter-spacing:.2em">where souls meet</span></div>
+  </div>
+  <div id="portal-enter">scroll or click to enter ✦</div>
+</div>
+
+<!-- Galaxy canvas -->
+<canvas id="galaxy-canvas"></canvas>
+<canvas id="ocean-canvas"></canvas>
+
+<!-- Main -->
+<div id="main">
+
+  <!-- HERO -->
+  <section id="hero">
+    <div class="hero-deco" style="width:600px;height:600px;top:-100px;left:-200px;background:radial-gradient(circle,var(--teal) 0%,transparent 70%)"></div>
+    <div class="hero-deco" style="width:400px;height:400px;bottom:-100px;right:-100px;background:radial-gradient(circle,var(--lavender) 0%,transparent 70%)"></div>
+    <div class="glow-orb"></div>
+    <h1 id="hero-title">Leera</h1>
+    <p id="hero-sub">✨ A sanctuary for kindred spirits ✨</p>
+    <p id="hero-tagline">friendship · magic · belonging</p>
+  </section>
+
+  <!-- SECTION 1 -->
+  <section class="zoom-section" style="min-height:100vh" id="sec1">
+    <div class="zoom-text s1" id="zt1">
+      <div class="emoji-row">🌸 💛 🌸</div>
+      <h2>Friendships Are the Poetry<br>the Universe Writes for Us</h2>
+      <p>Some connections transcend time and space — they feel like coming home to a soul you've always known, in a life you've always dreamed of.</p>
+    </div>
+  </section>
+
+  <!-- SECTION 2 -->
+  <section class="zoom-section" style="min-height:100vh" id="sec2">
+    <div class="zoom-text s2" id="zt2">
+      <div class="emoji-row">🌊 ✨ 🌊</div>
+      <h2>Real Friends Are Rare<br>Like Stars in Daylight</h2>
+      <p>You can't always see them, but they are always there — burning bright, holding steady, guiding you through the darkest nights.</p>
+    </div>
+  </section>
+
+  <!-- SECTION 3 -->
+  <section class="zoom-section" style="min-height:100vh" id="sec3">
+    <div class="zoom-text s3" id="zt3">
+      <div class="emoji-row">🌺 💖 🌺</div>
+      <h2>In the Garden of Life,<br>Friendship Is the Wildest Bloom</h2>
+      <p>It doesn't need tending every day — it simply grows, quietly magnificent, filling every corner with color and warmth and laughter.</p>
+    </div>
+  </section>
+
+  <!-- OCEAN SECTION -->
+  <section id="ocean-section">
+    <div class="wave"></div>
+    <div class="wave"></div>
+    <div class="wave"></div>
+    <div style="position:relative;z-index:5;text-align:center;padding:2rem" id="ocean-content">
+      <div class="zoom-text s4" id="zt4" style="position:relative;width:auto;max-width:800px">
+        <div class="emoji-row">🐚 🌊 🐚</div>
+        <h2>Dive Into the Depths<br>of True Connection</h2>
+        <p>Like the ocean — endless, mysterious, full of life — a true friendship holds wonders you will spend a lifetime discovering.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- SECTION 5 -->
+  <section class="zoom-section" style="min-height:100vh" id="sec5">
+    <div class="zoom-text s5" id="zt5">
+      <div class="emoji-row">🦋 💫 🦋</div>
+      <h2>You Are Someone's<br>Reason to Smile Today</h2>
+      <p>Without even knowing it, you are a light in someone's universe — a warmth they carry in their heart through every ordinary, extraordinary day.</p>
+    </div>
+  </section>
+
+  <!-- SECTION 6 -->
+  <section class="zoom-section" style="min-height:100vh" id="sec6">
+    <div class="zoom-text s6" id="zt6">
+      <div class="emoji-row">✨ 👑 ✨</div>
+      <h2>Leera Is Where<br>Your People Find You</h2>
+      <p>A world built of golden threads, shared laughter, soft silences, and the unspoken knowing that you are never, ever alone.</p>
+    </div>
+  </section>
+
+  <!-- FINAL -->
+  <section id="final">
+    <div class="glow-orb" style="top:20%;left:20%"></div>
+    <div class="glow-orb" style="bottom:20%;right:20%;animation-delay:-3s;background:radial-gradient(circle,rgba(200,164,255,.15) 0%,transparent 70%)"></div>
+    <p style="font-size:.8rem;letter-spacing:.6em;color:var(--teal);margin-bottom:2rem;text-transform:uppercase">Welcome to</p>
+    <h2 id="final-title">✦ Leera ✦</h2>
+    <p style="font-family:'Cormorant Garamond',serif;font-size:clamp(1rem,2vw,1.4rem);font-style:italic;color:rgba(255,255,255,.6);margin-top:2rem;max-width:500px;line-height:2;letter-spacing:.05em">
+      Where every soul has a place,<br>every heart has a home,<br>and every friendship is forever.
+    </p>
+    <div style="margin-top:3rem;font-size:2rem;letter-spacing:.5em;animation:finalPulse 2s ease-in-out infinite">🌸 💛 🌊 ✨ 💜</div>
+  </section>
+
+</div><!-- end main -->
+
+<!-- Scroll hint -->
+<div id="scroll-hint">
+  <div id="scroll-arrow"></div>
+  <span>scroll</span>
+</div>
+
+<script>
+// ===== CURSOR =====
+const cur=document.getElementById('cursor'),trail=document.getElementById('cursor-trail');
+let mx=0,my=0,tx=0,ty=0;
+document.addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY;cur.style.left=mx+'px';cur.style.top=my+'px'});
+setInterval(()=>{tx+=(mx-tx)*.15;ty+=(my-ty)*.15;trail.style.left=tx+'px';trail.style.top=ty+'px'},16);
+
+// Sparkle on click
+document.addEventListener('click',e=>{
+  const s=document.createElement('div');s.className='sparkle';
+  s.style.cssText=`left:${e.clientX}px;top:${e.clientY}px;position:fixed;width:20px;height:20px;pointer-events:none;z-index:9999;`;
+  s.innerHTML='✦';s.style.color=`hsl(${Math.random()*360},100%,80%)`;s.style.fontSize='20px';
+  document.body.appendChild(s);setTimeout(()=>s.remove(),700);
+});
+
+// ===== LOADING =====
+setTimeout(()=>{
+  const l=document.getElementById('loading');
+  l.style.opacity='0';setTimeout(()=>l.remove(),1000);
+},2200);
+
+// ===== GALAXY CANVAS =====
+const gc=document.getElementById('galaxy-canvas');
+const gctx=gc.getContext('2d');
+let stars=[],nebula=[];
+function resizeGC(){gc.width=window.innerWidth;gc.height=window.innerHeight}
+resizeGC();window.addEventListener('resize',resizeGC);
+
+for(let i=0;i<400;i++)stars.push({
+  x:Math.random()*window.innerWidth,y:Math.random()*window.innerHeight,
+  r:Math.random()*1.5+.2,s:Math.random()*.02+.005,
+  hue:Math.random()<.7?220+Math.random()*60:Math.random()*360,
+  twinkle:Math.random()*Math.PI*2,speed:Math.random()*.03+.01
+});
+
+for(let i=0;i<8;i++)nebula.push({
+  x:Math.random()*window.innerWidth,y:Math.random()*window.innerHeight,
+  r:100+Math.random()*200,
+  hue:Math.random()*360,a:Math.random()*.04+.01,
+  vx:(Math.random()-.5)*.1,vy:(Math.random()-.5)*.1
+});
+
+let galaxyActive=true,portalZoom=0;
+function drawGalaxy(t){
+  gctx.clearRect(0,0,gc.width,gc.height);
+  nebula.forEach(n=>{
+    n.x+=n.vx;n.y+=n.vy;
+    if(n.x<-n.r)n.x=gc.width+n.r;if(n.x>gc.width+n.r)n.x=-n.r;
+    if(n.y<-n.r)n.y=gc.height+n.r;if(n.y>gc.height+n.r)n.y=-n.r;
+    const g=gctx.createRadialGradient(n.x,n.y,0,n.x,n.y,n.r);
+    g.addColorStop(0,`hsla(${n.hue},80%,60%,${n.a})`);
+    g.addColorStop(1,'transparent');
+    gctx.fillStyle=g;gctx.beginPath();gctx.arc(n.x,n.y,n.r,0,Math.PI*2);gctx.fill();
+  });
+  stars.forEach(s=>{
+    s.twinkle+=s.speed;
+    const a=.4+Math.sin(s.twinkle)*.4;
+    const rr=s.r*(1+Math.sin(s.twinkle)*.2);
+    gctx.beginPath();gctx.arc(s.x,s.y,rr,0,Math.PI*2);
+    gctx.fillStyle=`hsla(${s.hue},80%,90%,${a})`;gctx.fill();
+  });
+  if(portalZoom>0){
+    const cx=gc.width/2,cy=gc.height/2;
+    const g=gctx.createRadialGradient(cx,cy,0,cx,cy,portalZoom);
+    g.addColorStop(0,`rgba(0,229,204,${Math.min(.3,portalZoom/gc.height*.3)})`);
+    g.addColorStop(.5,`rgba(200,164,255,${Math.min(.15,portalZoom/gc.height*.15)})`);
+    g.addColorStop(1,'transparent');
+    gctx.fillStyle=g;gctx.beginPath();gctx.arc(cx,cy,portalZoom,0,Math.PI*2);gctx.fill();
+  }
+  if(galaxyActive)requestAnimationFrame(drawGalaxy);
+}
+requestAnimationFrame(drawGalaxy);
+
+// ===== OCEAN CANVAS =====
+const oc=document.getElementById('ocean-canvas');
+const octx=oc.getContext('2d');
+let oceanTime=0;
+function resizeOC(){oc.width=window.innerWidth;oc.height=window.innerHeight}
+resizeOC();window.addEventListener('resize',resizeOC);
+
+function drawOcean(){
+  octx.clearRect(0,0,oc.width,oc.height);
+  const h=oc.height;
+  for(let layer=0;layer<5;layer++){
+    const offset=layer*.3;
+    const y0=h*.3+layer*50;
+    const alpha=.03+layer*.02;
+    octx.beginPath();octx.moveTo(0,y0);
+    for(let x=0;x<=oc.width;x+=10){
+      const y=y0+Math.sin(x*.005+oceanTime+offset)*30+Math.sin(x*.01+oceanTime*.7+offset*2)*15;
+      octx.lineTo(x,y);
+    }
+    octx.lineTo(oc.width,h);octx.lineTo(0,h);octx.closePath();
+    const g=octx.createLinearGradient(0,y0,0,h);
+    g.addColorStop(0,`rgba(0,${80+layer*20},${150+layer*20},${alpha})`);
+    g.addColorStop(1,`rgba(0,50,120,.1)`);
+    octx.fillStyle=g;octx.fill();
+  }
+  oceanTime+=.008;
+  requestAnimationFrame(drawOcean);
+}
+requestAnimationFrame(drawOcean);
+
+// ===== PORTAL =====
+let portalDone=false;
+function enterPortal(){
+  if(portalDone)return;portalDone=true;
+  const portal=document.getElementById('portal');
+  let zoom=0;const maxZoom=Math.max(window.innerWidth,window.innerHeight)*2;
+  const animate=()=>{
+    zoom+=zoom<200?8:zoom<500?20:zoom<1000?40:60;
+    portalZoom=zoom;
+    if(zoom<maxZoom){requestAnimationFrame(animate)}
+    else{
+      portal.style.opacity='0';
+      setTimeout(()=>{portal.style.display='none';portalZoom=0;},1000);
+      revealHero();
+    }
+  };requestAnimationFrame(animate);
+}
+
+document.getElementById('portal').addEventListener('click',enterPortal);
+let scrolledOnce=false;
+window.addEventListener('scroll',()=>{if(!scrolledOnce&&!portalDone){scrolledOnce=true;enterPortal()}},{ passive: true });
+
+// ===== HERO REVEAL =====
+function revealHero(){
+  setTimeout(()=>{
+    const t=document.getElementById('hero-title');
+    t.style.opacity='1';t.style.transform='scale(1)';
+  },200);
+  setTimeout(()=>{
+    document.getElementById('hero-sub').style.opacity='1';
+    document.getElementById('hero-sub').style.transform='translateY(0)';
+  },500);
+  setTimeout(()=>{
+    document.getElementById('hero-tagline').style.opacity='1';
+    document.getElementById('hero-tagline').style.transform='translateY(0)';
+  },800);
+}
+
+// ===== FLOATING PARTICLES =====
+function spawnParticle(){
+  const p=document.createElement('div');p.className='particle';
+  const size=Math.random()*6+2;
+  const colors=['var(--gold)','var(--teal)','var(--pink)','var(--lavender)','#fff'];
+  const c=colors[Math.floor(Math.random()*colors.length)];
+  p.style.cssText=`width:${size}px;height:${size}px;background:${c};left:${Math.random()*100}vw;top:0;opacity:.7;box-shadow:0 0 ${size*3}px ${c};animation-duration:${8+Math.random()*12}s;animation-delay:${Math.random()*2}s;position:fixed;z-index:5;`;
+  document.body.appendChild(p);
+  setTimeout(()=>p.remove(),(8+12)*1000);
+}
+setInterval(spawnParticle,600);
+
+// ===== SCROLL ZOOM TEXT =====
+const zoomEls=[
+  {id:'zt1',sec:'sec1'},{id:'zt2',sec:'sec2'},{id:'zt3',sec:'sec3'},
+  {id:'zt4',sec:'ocean-section'},{id:'zt5',sec:'sec5'},{id:'zt6',sec:'sec6'}
+];
+
+function checkZoom(){
+  const scrollY=window.scrollY;
+  const wh=window.innerHeight;
+  zoomEls.forEach(({id,sec})=>{
+    const el=document.getElementById(id);
+    const section=document.getElementById(sec);
+    if(!el||!section)return;
+    const rect=section.getBoundingClientRect();
+    const progress=1-rect.top/wh;
+    if(progress>.15&&progress<.85){
+      el.classList.remove('gone');el.classList.add('visible');
+    } else if(progress>=.85){
+      el.classList.add('gone');el.classList.remove('visible');
+    } else {
+      el.classList.remove('visible','gone');
+    }
+  });
+
+  // Ocean canvas fade
+  const oceanSec=document.getElementById('ocean-section');
+  if(oceanSec){
+    const r=oceanSec.getBoundingClientRect();
+    const vis=Math.max(0,Math.min(1,1-r.top/wh));
+    oc.style.opacity=vis*.6;
+  }
+
+  // Scroll hint
+  const hint=document.getElementById('scroll-hint');
+  if(scrollY>100)hint.style.opacity='0';else hint.style.opacity='1';
+}
+window.addEventListener('scroll',checkZoom,{passive:true});
+
+// ===== BUBBLES IN OCEAN =====
+function spawnBubble(){
+  const b=document.createElement('div');b.className='bubble';
+  const sz=Math.random()*20+5;
+  b.style.cssText=`width:${sz}px;height:${sz}px;left:${Math.random()*100}%;bottom:0;animation-duration:${6+Math.random()*8}s;animation-delay:${Math.random()*2}s;position:absolute;z-index:3;`;
+  const ocean=document.getElementById('ocean-section');
+  if(ocean)ocean.appendChild(b);
+  setTimeout(()=>b.remove(),16000);
+}
+setInterval(spawnBubble,800);
+
+// Initial particle burst
+for(let i=0;i<15;i++)setTimeout(spawnParticle,i*200);
+</script>
+</body>
+</html>
